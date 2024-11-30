@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guide Allocation System</title>
+    <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+    <div class="sidebar">
+        <h2>Guide Allocation</h2>
+        <ul>
+            <li><a href="report.html">Report</a></li>
+            <li><a href="admin-login.html">Back</a></li>
+            <li><a href="#">Guidelines</a></li>
+        </ul>
+        <a href="index.html" class="logout">Logout</a>
+    </div>
+    <div class="main-content">
+        <h1>Edit / Add Guide Names and Allocate Slots</h1>
+        <div class="form-container">
+            <table id="guideTable">
+                <thead>
+                    <tr>
+                        <th>Guide Name</th>
+                        <th>Slots</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Guide rows will be populated here by JavaScript -->
+                </tbody>
+            </table>
+            <div>
+                <label for="guideNameInput">Guide Name:</label>
+                <input type="text" id="guideNameInput" placeholder="Enter guide name">
+                <label for="slotsInput">Slots:</label>
+                <input type="number" id="slotsInput" placeholder="Enter slots">
+                <button onclick="addGuide()">Add Guide</button>
+            </div>
+        </div>
+    </div>
+    <footer>
+        &copy; 2024 Guide Allocation System. All rights reserved.
+    </footer>
+    <script>
+        // Function to populate table with guides from server
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch('fetch_guides.php')
+                .then(response => response.json())
+                .then(data => {
+                    const table = document.getElementById('guideTable').getElementsByTagName('tbody')[0];
+                    data.forEach(guide => {
+                        const newRow = table.insertRow();
+                        newRow.setAttribute('data-id', guide.id);
+
+                        const nameCell = newRow.insertCell(0);
+                        nameCell.innerHTML = guide.guide_name;
+
+                        const slotsCell = newRow.insertCell(1);
+                        slotsCell.innerHTML = guide.slots ? guide.slots : '0';
+
+                        const actionCell = newRow.insertCell(2);
+                        actionCell.innerHTML = `
+                            <button onclick="editSlots(this)">Edit</button>
+                        `;
+                    });
+                });
+        });
+
+        // Function to edit slots
+        function editSlots(button) {
+            const row = button.parentNode.parentNode;
+            const id = row.getAttribute('data-id');
+            const slotsCell = row.cells[1];
+            const actionCell = row.cells[2];
+
+            const slots = slotsCell.innerHTML;
+
+            slotsCell.innerHTML = `<input type="number" value="${slots}" id="editSlots">`;
+            actionCell.innerHTML = `
+                <button onclick="saveSlots(this, ${id})">Save</button>
+                <button onclick="cancelEdit(this)">Cancel</button>
+            `;
+        }
+
+        // Function to save the edited slots
+        function saveSlots(button, id) {
+            const row = button.parentNode.parentNode;
+            const slotsCell = row.cells[1];
+            const actionCell = row.cells[2];
+
+            const editedSlots = document.getElementById('editSlots').value;
+
+            slotsCell.innerHTML = editedSlots;
+            actionCell.innerHTML = `
+                <button onclick="editSlots(this)">Edit</button>
+            `;
+
+            // Send data to the server to update slots
+            sendData('edit', id, null, editedSlots);
+        }
+
+        // Function to cancel editing
+        function cancelEdit(button) {
+            const row = button.parentNode.parentNode;
+            const slotsCell = row.cells[1];
+            const actionCell = row.cells[2];
+
+            const slots = slotsCell.innerHTML;
+
+            slotsCell.innerHTML = slots;
+            actionCell.innerHTML = `
+                <button onclick="editSlots(this)">Edit</button>
+            `;
+        }
+
+        // Function to add a guide
+        function addGuide() {
+            const guideName = document.getElementById('guideNameInput').value;
+            const slots = document.getElementById('slotsInput').value;
+
+            if (guideName && slots) {
+                // Send data to the server to add guide
+                sendData('add', null, guideName, slots);
+
+                // Optionally, update the table in the UI
+                const table = document.getElementById('guideTable').getElementsByTagName('tbody')[0];
+                const newRow = table.insertRow();
+
+                const nameCell = newRow.insertCell(0);
+                nameCell.innerHTML = guideName;
+
+                const slotsCell = newRow.insertCell(1);
+                slotsCell.innerHTML = slots;
+
+                const actionCell = newRow.insertCell(2);
+                actionCell.innerHTML = `<button onclick="editSlots(this)">Edit</button>`;
+            }
+        }
+
+        // Function to send data to the server
+        function sendData(action, id, guideName, slots) {
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', 'admin.php', true);
+            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    console.log(xhr.responseText);
+                    // Optionally, handle response here
+                }
+            };
+            const data = `action=${action}&id=${id}&guide_name=${guideName}&slots=${slots}`;
+            xhr.send(data);
+        }
+    </script>
+</body>
+</html>
